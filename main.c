@@ -6,9 +6,11 @@
 typedef struct {
 	char name[32];
 	unsigned attr_bonus[ATTR_MAX];
+	unsigned wt;
 } race_t;
 
 unsigned race_hd, race_id_hd, race_max = 0;
+unsigned wt_punch, wt_peck, wt_bite;
 
 unsigned stat(unsigned ref, enum attribute at) {
 	race_t race;
@@ -27,7 +29,7 @@ int on_add(unsigned ref, unsigned type, uint64_t v __attribute__((unused))) {
 	if (type != TYPE_ENTITY)
 		return 1;
 
-	race_id = random() % (race_max + 1);
+	race_id = random() % 5;
 	nd_put(race_id_hd, &ref, &race_id);
 	return 0;
 }
@@ -35,12 +37,13 @@ int on_add(unsigned ref, unsigned type, uint64_t v __attribute__((unused))) {
 static inline void
 race_add(char *name, unsigned str_b, unsigned con_b,
 		unsigned dex_b, unsigned int_b,
-		unsigned wiz_b, unsigned cha_b) {
+		unsigned wiz_b, unsigned cha_b, unsigned wt) {
 	race_t race = {
 		.attr_bonus = {
 			str_b, con_b, dex_b,
 			int_b, wiz_b, cha_b
 		},
+		.wt = wt,
 	};
 
 	strlcpy(race.name, name, sizeof(race.name));
@@ -74,13 +77,29 @@ mod_open(void) {
 	race_id_hd = nd_open("race_id", "u", "u", 0);
 }
 
+unsigned fighter_wt(unsigned ref) {
+	race_t race;
+	unsigned race_id;
+
+	nd_get(race_id_hd, &race_id, &ref);
+	nd_get(race_hd, &race, &race_id);
+
+	return race.wt;
+}
+
 void
 mod_install(void) {
 	mod_open();
 
-	race_add("human", 1, 1 ,1, 1, 1, 1);
-	race_add("elf", 0, 0 ,2, 0, 0, 0);
-	race_add("dwarf", 0, 2 ,0, 0, 0, 0);
-	race_add("halfling", 0, 0 ,2, 0, 0, 0);
-	race_add("half-orc", 2, 1 ,0, 0, 0, 0);
+	wt_punch = nd_put(HD_WTS, NULL, "punch");
+	wt_peck = nd_put(HD_WTS, NULL, "peck");
+	wt_bite = nd_put(HD_WTS, NULL, "bite");
+
+	race_add("human", 1, 1, 1, 1, 1, 1, wt_punch);
+	race_add("elf", 0, 0, 2, 0, 0, 0, wt_punch);
+	race_add("dwarf", 0, 2, 0, 0, 0, 0, wt_punch);
+	race_add("halfling", 0, 0, 2, 0, 0, 0, wt_punch);
+	race_add("half-orc", 2, 1, 0, 0, 0, 0, wt_punch);
+	race_add("bird", 0, 0, 2, 0, 1, 0, wt_peck);
+	race_add("fish", 0, 2, 0, 1, 0, 0, wt_bite);
 }
