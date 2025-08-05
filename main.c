@@ -1,3 +1,4 @@
+#include "./include/uapi/race.h"
 #include <stdlib.h>
 
 #include <nd/nd.h>
@@ -9,8 +10,25 @@ typedef struct {
 	unsigned wt;
 } race_t;
 
-unsigned race_hd, race_id_hd, race_max = 0;
-unsigned wt_punch, wt_peck, wt_bite;
+unsigned race_hd, race_rhd, race_id_hd, race_sid_hd, race_max = 0;
+unsigned wt_punch;
+
+SIC_DEF(int, race_set, unsigned, skid, unsigned, race_id);
+SIC_DEF(unsigned, race_query, char *, name);
+SIC_DEF(unsigned, race_add, char *, name, unsigned, str_b,
+		unsigned, con_b, unsigned, dex_b,
+		unsigned, int_b, unsigned, wiz_b,
+		unsigned, cha_b, unsigned, wt);
+
+int race_set(unsigned skid, unsigned race_id) {
+	return nd_put(race_sid_hd, &skid, &race_id);
+}
+
+unsigned race_query(char *name) {
+	unsigned ret = NOTHING;
+	nd_get(race_rhd, &ret, name);
+	return ret;
+}
 
 unsigned stat(unsigned ref, enum attribute at) {
 	race_t race;
@@ -25,19 +43,24 @@ unsigned stat(unsigned ref, enum attribute at) {
 
 int on_add(unsigned ref, unsigned type, uint64_t v __attribute__((unused))) {
 	unsigned race_id;
+	OBJ obj;
 
 	if (type != TYPE_ENTITY)
 		return 1;
 
-	race_id = random() % 5;
+	nd_get(HD_OBJ, &obj, &ref);
+	if (nd_get(race_sid_hd, &race_id, &obj.skid))
+		race_id = random() % 5;
+
 	nd_put(race_id_hd, &ref, &race_id);
 	return 0;
 }
 
-static inline void
-race_add(char *name, unsigned str_b, unsigned con_b,
-		unsigned dex_b, unsigned int_b,
-		unsigned wiz_b, unsigned cha_b, unsigned wt) {
+unsigned race_add(char *name, unsigned str_b,
+		unsigned con_b, unsigned dex_b,
+		unsigned int_b, unsigned wiz_b,
+		unsigned cha_b, unsigned wt)
+{
 	race_t race = {
 		.attr_bonus = {
 			str_b, con_b, dex_b,
@@ -47,7 +70,7 @@ race_add(char *name, unsigned str_b, unsigned con_b,
 	};
 
 	strlcpy(race.name, name, sizeof(race.name));
-	race_max = nd_put(race_hd, NULL, &race);
+	return race_max = nd_put(race_hd, NULL, &race);
 }
 
 int
@@ -70,11 +93,9 @@ on_status(unsigned ref)
 	return 0;
 }
 
-void
-mod_open(void) {
-	nd_len_reg("race", sizeof(race_t));
-	race_hd = nd_open("race", "u", "race", ND_AINDEX);
-	race_id_hd = nd_open("race_id", "u", "u", 0);
+int race_assoc(void **skey, void *key __attribute__((unused)), void *data) {
+	*skey = ((race_t *) data)->name;
+	return 0;
 }
 
 unsigned fighter_wt(unsigned ref) {
@@ -88,18 +109,24 @@ unsigned fighter_wt(unsigned ref) {
 }
 
 void
+mod_open(void) {
+	nd_len_reg("race", sizeof(race_t));
+	race_hd = nd_open("race", "u", "race", ND_AINDEX);
+	race_rhd = nd_open("race_rhd", "s", "u", ND_SEC | ND_PGET);
+	nd_assoc(race_rhd, race_hd, &race_assoc);
+	race_id_hd = nd_open("race_id", "u", "u", 0);
+	race_sid_hd = nd_open("race_sid", "u", "u", 0);
+}
+
+void
 mod_install(void) {
 	mod_open();
 
 	wt_punch = nd_put(HD_WTS, NULL, "punch");
-	wt_peck = nd_put(HD_WTS, NULL, "peck");
-	wt_bite = nd_put(HD_WTS, NULL, "bite");
 
 	race_add("human", 1, 1, 1, 1, 1, 1, wt_punch);
 	race_add("elf", 0, 0, 2, 0, 0, 0, wt_punch);
 	race_add("dwarf", 0, 2, 0, 0, 0, 0, wt_punch);
 	race_add("halfling", 0, 0, 2, 0, 0, 0, wt_punch);
 	race_add("half-orc", 2, 1, 0, 0, 0, 0, wt_punch);
-	race_add("bird", 0, 0, 2, 0, 1, 0, wt_peck);
-	race_add("fish", 0, 2, 0, 1, 0, 0, wt_bite);
 }
