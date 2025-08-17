@@ -93,7 +93,9 @@ on_status(unsigned ref)
 	return 0;
 }
 
-int race_assoc(void **skey, void *key __attribute__((unused)), void *data) {
+int race_assoc(const void ** const skey,
+		const void * const key __attribute__((unused)),
+		const void * const data) {
 	*skey = ((race_t *) data)->name;
 	return 0;
 }
