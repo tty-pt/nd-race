@@ -40,8 +40,7 @@
  * name attr.h also XY_DECLs. ATTR_IMPL is the guard nd-attr's own provider TU
  * uses, reused here for the same reason -- an XY_IMPL and an XY_DECL of one
  * name in a single TU collide. */
-#define ATTR_IMPL
-#include <nd/attr.h>
+#include <nd/attr-types.h>
 
 typedef struct {
 	char name[32];
