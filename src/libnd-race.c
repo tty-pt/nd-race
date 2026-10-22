@@ -41,12 +41,7 @@
  * uses, reused here for the same reason -- an XY_IMPL and an XY_DECL of one
  * name in a single TU collide. */
 #include <nd/attr-types.h>
-
-typedef struct {
-	char name[32];
-	unsigned attr_bonus[ATTR_MAX];
-	unsigned wt;
-} race_t;
+#include <nd/race-types.h>
 
 static unsigned race_hd, race_rhd, race_id_hd, race_sid_hd;
 static unsigned race_max = 0;
