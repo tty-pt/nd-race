@@ -154,6 +154,28 @@ XY_IMPL(unsigned, fighter_wt, unsigned, ref)
 	return race.wt;
 }
 
+static unsigned wt_cache;
+
+static int
+race_row(const char *const *f, size_t n, void *user)
+{
+	char *last = user;
+	unsigned wt;
+	if (n < 8)
+		return 0;
+	/* one weapon word per distinct name; rows usually share it */
+	if (strcmp(last, f[7])) {
+		wt_cache = (unsigned)nd_put(HD_WTS, NULL, (void *)f[7]);
+		strlcpy(last, f[7], 32);
+	}
+	wt = wt_cache;
+	race_add((char *)f[0], (unsigned)atoi(f[1]), (unsigned)atoi(f[2]),
+			(unsigned)atoi(f[3]), (unsigned)atoi(f[4]),
+			(unsigned)atoi(f[5]), (unsigned)atoi(f[6]),
+			wt);
+	return 0;
+}
+
 XY_MODULE_API void
 xy_install(void)
 {
@@ -164,13 +186,8 @@ xy_install(void)
 	race_id_hd = (unsigned)nd_open("race_id", "u", "u", 0);
 	race_sid_hd = (unsigned)nd_open("race_sid", "u", "u", 0);
 
-	{
-		unsigned wt_punch = nd_put(HD_WTS, NULL, "punch");
+	char last_wt[32] = "";
 
-		race_add("human", 1, 1, 1, 1, 1, 1, wt_punch);
-		race_add("elf", 0, 0, 2, 0, 0, 0, wt_punch);
-		race_add("dwarf", 0, 2, 0, 0, 0, 0, wt_punch);
-		race_add("halfling", 0, 0, 0, 0, 0, 0, wt_punch);
-		race_add("half-orc", 2, 1, 0, 0, 0, 0, wt_punch);
-	}
+	if (nd_table_load("nd-race", "races", race_row, last_wt) < 0)
+		WARN("nd-race: races.dsv not found, no races loaded\n");
 }

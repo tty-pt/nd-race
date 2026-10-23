@@ -1,6 +1,6 @@
 all := libnd-race
 
-LDLIBS-libnd-race := -lxylem
+LDLIBS-libnd-race := -lxylem -laxil-nd
 
 FOLDER := nd
 
