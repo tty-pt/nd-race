@@ -1,4 +1,14 @@
-## 1.0.1
+## [1.1.0]
+
+- **Declarative DSV Table (`data/races.dsv`)**:
+  - Exported 5 playable species into declarative `data/races.dsv` table.
+  - Refactored `src/libnd-race.c` to load race modifiers dynamically via `nd_table_load()`.
+- **Two-Header Architecture (`<nd/race-types.h>`)**:
+  - Extracted public types header `<nd/race-types.h>` defining `race_t`.
+- **Documentation**:
+  - Standardized README with man-src, art, and modder guide.
+
+## [1.0.1]
 
 - **macOS: link with `-undefined dynamic_lookup`.** macOS `ld` rejects
   undefined symbols in a shared library, but `WARN` needs `qsyslog` — an
