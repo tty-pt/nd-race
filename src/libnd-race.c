@@ -69,14 +69,17 @@ XY_IMPL(unsigned, race_query, char *, name)
  * nd_last() gives us whatever ran before us in this dispatch. */
 XY_IMPL(unsigned, attr_stat, unsigned, ref, enum attribute, at)
 {
-	race_t race;
-	unsigned race_id, last;
+	race_t race = { 0 };
+	unsigned race_id = 0, last = 0;
 
-	nd_get(race_id_hd, &race_id, &ref);
-	nd_get(race_hd, &race, &race_id);
+	if (nd_get(race_id_hd, &race_id, &ref) != 0)
+		race_id = 0;
+	if (nd_get(race_hd, &race, &race_id) != 0)
+		memset(&race, 0, sizeof(race));
 
-	nd_last(&last);
-	return last + race.attr_bonus[at];
+	if (nd_last(&last) <= 0)
+		last = 0;
+	return last + (at < ATTR_MAX ? race.attr_bonus[at] : 0);
 }
 
 XY_IMPL(int, on_add, unsigned, ref, unsigned, type, uint64_t, v)
@@ -115,11 +118,16 @@ XY_IMPL(unsigned, race_add, char *, name, unsigned, str_b,
 
 XY_IMPL(int, on_status, unsigned, ref)
 {
-	race_t race;
-	unsigned race_id;
+	race_t race = { 0 };
+	unsigned race_id = 0;
 
-	nd_get(race_id_hd, &race_id, &ref);
-	nd_get(race_hd, &race, &race_id);
+	if (nd_get(race_id_hd, &race_id, &ref) != 0) {
+		race_id = 0;
+		nd_put(race_id_hd, &ref, &race_id);
+	}
+	if (nd_get(race_hd, &race, &race_id) != 0) {
+		strlcpy(race.name, "human", sizeof(race.name));
+	}
 
 	nd_printf(ref, "Race\t%8s, bstr %3u, bcon %3u, bdex %3u, bint %3u, bwis %3u, bcha %3u\n",
 			race.name,
