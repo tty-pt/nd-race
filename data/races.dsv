@@ -1,0 +1,6 @@
+# name|str|con|dex|int|wis|cha|weapon_word
+human|1|1|1|1|1|1|punch
+elf|0|0|2|0|0|0|punch
+dwarf|0|2|0|0|0|0|punch
+halfling|0|0|0|0|0|0|punch
+half-orc|2|1|0|0|0|0|punch

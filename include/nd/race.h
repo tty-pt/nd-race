@@ -32,6 +32,7 @@
 #define ND_RACE_H
 
 #include <ttypt/xy.h>
+#include <nd/race-types.h>
 
 /* API */
 XY_DECL(int, race_set, unsigned, skid, unsigned, race_id);

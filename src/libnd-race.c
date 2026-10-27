@@ -40,14 +40,8 @@
  * name attr.h also XY_DECLs. ATTR_IMPL is the guard nd-attr's own provider TU
  * uses, reused here for the same reason -- an XY_IMPL and an XY_DECL of one
  * name in a single TU collide. */
-#define ATTR_IMPL
-#include <nd/attr.h>
-
-typedef struct {
-	char name[32];
-	unsigned attr_bonus[ATTR_MAX];
-	unsigned wt;
-} race_t;
+#include <nd/attr-types.h>
+#include <nd/race-types.h>
 
 static unsigned race_hd, race_rhd, race_id_hd, race_sid_hd;
 static unsigned race_max = 0;
@@ -75,14 +69,17 @@ XY_IMPL(unsigned, race_query, char *, name)
  * nd_last() gives us whatever ran before us in this dispatch. */
 XY_IMPL(unsigned, attr_stat, unsigned, ref, enum attribute, at)
 {
-	race_t race;
-	unsigned race_id, last;
+	race_t race = { 0 };
+	unsigned race_id = 0, last = 0;
 
-	nd_get(race_id_hd, &race_id, &ref);
-	nd_get(race_hd, &race, &race_id);
+	if (nd_get(race_id_hd, &race_id, &ref) != 0)
+		race_id = 0;
+	if (nd_get(race_hd, &race, &race_id) != 0)
+		memset(&race, 0, sizeof(race));
 
-	nd_last(&last);
-	return last + race.attr_bonus[at];
+	if (nd_last(&last) <= 0)
+		last = 0;
+	return last + (at < ATTR_MAX ? race.attr_bonus[at] : 0);
 }
 
 XY_IMPL(int, on_add, unsigned, ref, unsigned, type, uint64_t, v)
@@ -121,11 +118,16 @@ XY_IMPL(unsigned, race_add, char *, name, unsigned, str_b,
 
 XY_IMPL(int, on_status, unsigned, ref)
 {
-	race_t race;
-	unsigned race_id;
+	race_t race = { 0 };
+	unsigned race_id = 0;
 
-	nd_get(race_id_hd, &race_id, &ref);
-	nd_get(race_hd, &race, &race_id);
+	if (nd_get(race_id_hd, &race_id, &ref) != 0) {
+		race_id = 0;
+		nd_put(race_id_hd, &ref, &race_id);
+	}
+	if (nd_get(race_hd, &race, &race_id) != 0) {
+		strlcpy(race.name, "human", sizeof(race.name));
+	}
 
 	nd_printf(ref, "Race\t%8s, bstr %3u, bcon %3u, bdex %3u, bint %3u, bwis %3u, bcha %3u\n",
 			race.name,
@@ -160,6 +162,28 @@ XY_IMPL(unsigned, fighter_wt, unsigned, ref)
 	return race.wt;
 }
 
+static unsigned wt_cache;
+
+static int
+race_row(const char *const *f, size_t n, void *user)
+{
+	char *last = user;
+	unsigned wt;
+	if (n < 8)
+		return 0;
+	/* one weapon word per distinct name; rows usually share it */
+	if (strcmp(last, f[7])) {
+		wt_cache = (unsigned)nd_put(HD_WTS, NULL, (void *)f[7]);
+		strlcpy(last, f[7], 32);
+	}
+	wt = wt_cache;
+	race_add((char *)f[0], (unsigned)atoi(f[1]), (unsigned)atoi(f[2]),
+			(unsigned)atoi(f[3]), (unsigned)atoi(f[4]),
+			(unsigned)atoi(f[5]), (unsigned)atoi(f[6]),
+			wt);
+	return 0;
+}
+
 XY_MODULE_API void
 xy_install(void)
 {
@@ -170,13 +194,8 @@ xy_install(void)
 	race_id_hd = (unsigned)nd_open("race_id", "u", "u", 0);
 	race_sid_hd = (unsigned)nd_open("race_sid", "u", "u", 0);
 
-	{
-		unsigned wt_punch = nd_put(HD_WTS, NULL, "punch");
+	char last_wt[32] = "";
 
-		race_add("human", 1, 1, 1, 1, 1, 1, wt_punch);
-		race_add("elf", 0, 0, 2, 0, 0, 0, wt_punch);
-		race_add("dwarf", 0, 2, 0, 0, 0, 0, wt_punch);
-		race_add("halfling", 0, 0, 0, 0, 0, 0, wt_punch);
-		race_add("half-orc", 2, 1, 0, 0, 0, 0, wt_punch);
-	}
+	if (nd_table_load("nd-race", "races", race_row, last_wt) < 0)
+		WARN("nd-race: races.dsv not found, no races loaded\n");
 }

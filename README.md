@@ -56,6 +56,25 @@ make
   answers the racial weight; `on_add` and `on_status` cover creation and
   display.
 
+## In-Game Commands (`man-src/`)
+
+Race selection is handled during onboarding (`begin.10`) and reported via character sheet review (`status.10`).
+
+## Packaged Assets (`art/`)
+
+Racial heritage portraits, avatar silhouettes, and species icons.
+
+## Wire Protocol & BCP Integration
+
+Racial attribute adjustments (e.g. elf dexterity, dwarf constitution) fold into `BCP_STATS` frames.
+
+## Modder Extension Guide
+
+To introduce a new race:
+1. Define a `race_t` record specifying baseline attribute bonuses, weight, and size.
+2. Register the race into the `race` table during `xy_install()`.
+3. Co-implement the `attr_stat` and `fighter_wt` XY chains.
+
 ## Testing
 
 There is no `test.sh` here. Behaviour is asserted by the engine's own suite:
